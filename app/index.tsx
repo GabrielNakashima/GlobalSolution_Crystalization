@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Image, RefreshControl } from 'react-native';
-// Voltamos a importar a API_URL que aponta para o seu servidor online
 import { useApp, API_URL } from '../src/context/AppContext';
 
 type ClassificationType = 'Clear' | 'Crystals' | 'Precipitate' | 'Other';
