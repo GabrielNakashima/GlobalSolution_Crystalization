@@ -1,0 +1,27 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "package-lock.json": true,
+        "package.json": true,
+        "LICENSE": true,
+        "CLAUDE.md": true,
+        "app.json": true,
+        "AGENTS.md": true,
+        ".vscode": true,
+        ".claude": true
+    },
+    "hide-files.files": [
+        "package-lock.json",
+        "package.json",
+        "LICENSE",
+        "CLAUDE.md",
+        "app.json",
+        "AGENTS.md",
+        ".vscode",
+        ".claude"
+    ]
+}
