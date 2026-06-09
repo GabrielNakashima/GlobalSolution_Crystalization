@@ -17,7 +17,7 @@ interface AuthContextType {
 
 // Credenciais mockadas (hardcoded)
 const MOCK_CREDENTIALS = {
-  email: 'backyardigans@gmail.com',
+  email: 'admin@crystal.com',
   password: '123456'
 };
 
@@ -25,7 +25,7 @@ const MOCK_CREDENTIALS = {
 const MOCK_USER_DATA: User = {
   id: 'usr_001_alpha',
   name: 'Lead Researcher',
-  email: 'admin@spacelab.com',
+  email: 'admin@crystal.com',
   role: 'Administrator'
 };
 
@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const loadSession = async () => {
       try {
-        // Recupera a sessão de forma segura utilizando o SecureStore da Expo
+        // Recupera a sessão utilizando o SecureStore da Expo
         const session = await SecureStore.getItemAsync('user_session');
         if (session) {
           setUser(JSON.parse(session));
@@ -54,20 +54,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Validação contra os dados fixos definidos no código
     if (email === MOCK_CREDENTIALS.email && password === MOCK_CREDENTIALS.password) {
       try {
-        // Salva os dados do usuário (sem a senha) no armazenamento seguro
-        await SecureStore.setItemAsync('user_session', JSON.stringify(MOCK_USER_DATA));
-        setUser(MOCK_USER_DATA);
+        const userData: User = {
+          ...MOCK_USER_DATA
+        };
+
+        await SecureStore.setItemAsync('user_session', JSON.stringify(userData));
+        setUser(userData);
         return true;
       } catch (error) {
         console.error('Falha ao salvar a sessão:', error);
         return false;
       }
     }
-    
-    // Retorna falso caso as credenciais não batam com o Mock
     return false;
   };
 
@@ -88,7 +88,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-// Hook customizado para facilitar o acesso ao contexto
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {

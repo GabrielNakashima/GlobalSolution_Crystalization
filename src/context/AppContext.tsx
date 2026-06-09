@@ -1,6 +1,6 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-export const API_URL = 'http://API_SOA:8080/api'; 
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://API_SOA:8080/api';
 
 export interface Mission {
   id: string;
@@ -42,7 +42,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const toggleTheme = async () => {
+  const toggleTheme = useCallback(async () => {
     try {
       const newTheme = !isDarkMode;
       setIsDarkMode(newTheme);
@@ -50,24 +50,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (error) {
       console.error(error);
     }
-  };
+  }, [isDarkMode]);
 
-  const fetchMissions = async () => {
+  const fetchMissions = useCallback(async () => {
     setLoadingMissions(true);
     try {
       const response = await fetch(`${API_URL}/missions`);
       if (response.ok) {
         const data = await response.json();
         setMissions(data);
-      } else {
-        console.error('Erro ao buscar missões da API');
       }
     } catch (error) {
       console.error('Erro de conexão com o servidor SOA:', error);
     } finally {
       setLoadingMissions(false);
     }
-  };
+  }, []);
 
   const addMission = async (newMissionData: Omit<Mission, 'id' | 'status' | 'date'>): Promise<boolean> => {
     try {

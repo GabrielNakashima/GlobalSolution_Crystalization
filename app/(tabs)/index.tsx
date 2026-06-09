@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Image, RefreshControl } from 'react-native';
 import { useApp, API_URL } from '../../src/context/AppContext';
+import { colors } from '../../src/constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 type ClassificationType = 'Clear' | 'Crystals' | 'Precipitate' | 'Other';
 
@@ -14,11 +16,13 @@ interface LatestImageAnalysis {
 
 export default function DashboardTelemetry() {
   const { isDarkMode, fetchMissions } = useApp();
+  const theme = isDarkMode ? colors.dark : colors.light;
   const styles = useMemo(() => getStyles(isDarkMode), [isDarkMode]);
 
   const [latestAnalysis, setLatestAnalysis] = useState<LatestImageAnalysis | null>(null);
   const [loadingImage, setLoadingImage] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const fetchLatestImageAnalysis = useCallback(async () => {
     setLoadingImage(true);
@@ -56,10 +60,10 @@ export default function DashboardTelemetry() {
   const getClassificationBadge = (type: ClassificationType) => {
     switch (type) {
       case 'Crystals': return { backgroundColor: '#2A9D8F15', color: '#2A9D8F', label: 'Crystals (Estrutura Ordenada)' };
-      case 'Clear': return { backgroundColor: '#4CC9F015', color: '#4CC9F0', label: 'Clear (Sem Nucleação)' };
-      case 'Precipitate': return { backgroundColor: '#E6394615', color: '#E63946', label: 'Precipitate (Amorfo)' };
+      case 'Clear': return { backgroundColor: theme.primary + '15', color: theme.primary, label: 'Clear (Sem Nucleação)' };
+      case 'Precipitate': return { backgroundColor: theme.error + '15', color: theme.error, label: 'Precipitate (Amorfo)' };
       case 'Other': return { backgroundColor: '#8D99AE15', color: '#8D99AE', label: 'Other (Artefato / Ruído)' };
-      default: return { backgroundColor: '#8892B015', color: '#8892B0', label: 'Não Identificado' };
+      default: return { backgroundColor: theme.textSecondary + '15', color: theme.textSecondary, label: 'Não Identificado' };
     }
   };
 
@@ -70,7 +74,7 @@ export default function DashboardTelemetry() {
       style={styles.container} 
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4CC9F0" />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
       }
     >
       <Text style={styles.title}>Mapeamento Orbital</Text>
@@ -85,17 +89,22 @@ export default function DashboardTelemetry() {
         
         {loadingImage ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator color="#4CC9F0" size="large" />
+            <ActivityIndicator color={theme.primary} size="large" />
             <Text style={styles.loadingText}>Processando imagem...</Text>
           </View>
         ) : latestAnalysis ? (
           <View>
             <View style={styles.imageWrapper}>
-              {latestAnalysis.imageUrl ? (
-                <Image source={{ uri: latestAnalysis.imageUrl }} style={styles.microscopeImage} />
+              {latestAnalysis.imageUrl && !imageError ? (
+                <Image 
+                  source={{ uri: latestAnalysis.imageUrl }} 
+                  style={styles.microscopeImage} 
+                  onError={() => setImageError(true)}
+                />
               ) : (
                 <View style={styles.imageFallback}>
-                  <Text style={styles.fallbackText}>Imagem indisponível</Text>
+                  <Ionicons name="image-outline" size={32} color={theme.textSecondary} />
+                  <Text style={styles.fallbackText}>Erro ao carregar imagem do microscópio</Text>
                 </View>
               )}
             </View>
@@ -127,135 +136,138 @@ export default function DashboardTelemetry() {
   );
 }
 
-const getStyles = (isDarkMode: boolean) => StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: isDarkMode ? '#0B0E14' : '#F4F6F9', 
-    padding: 20 
-  },
-  title: { 
-    fontSize: 28, 
-    fontWeight: '800', 
-    color: isDarkMode ? '#FFFFFF' : '#1A202C', 
-    marginBottom: 24,
-    letterSpacing: -0.5
-  },
-  card: { 
-    backgroundColor: isDarkMode ? '#131A26' : '#FFFFFF', 
-    padding: 20, 
-    borderRadius: 16, 
-    marginBottom: 20, 
-    shadowColor: isDarkMode ? '#000' : '#CBD5E1', 
-    shadowOffset: { width: 0, height: 4 }, 
-    shadowOpacity: 0.15, 
-    shadowRadius: 12, 
-    elevation: 4,
-    borderWidth: isDarkMode ? 1 : 0,
-    borderColor: '#232D3F'
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  cardSubtitle: { 
-    fontSize: 12, 
-    color: '#8892B0', 
-    fontWeight: '700', 
-    letterSpacing: 1.2 
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#8892B0',
-    fontWeight: '500',
-  },
-  loadingContainer: {
-    paddingVertical: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    color: '#8892B0',
-    fontSize: 14,
-    fontWeight: '500'
-  },
-  imageWrapper: { 
-    width: '100%', 
-    height: 220, 
-    borderRadius: 12, 
-    backgroundColor: isDarkMode ? '#0B0E14' : '#E2E8F0', 
-    overflow: 'hidden',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: isDarkMode ? '#232D3F' : '#E2E8F0',
-  },
-  microscopeImage: { 
-    width: '100%', 
-    height: '100%', 
-    resizeMode: 'cover' 
-  },
-  imageFallback: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  fallbackText: { 
-    color: '#8892B0',
-    fontWeight: '500' 
-  },
-  resultContainer: {
-    backgroundColor: isDarkMode ? '#0B0E14' : '#F8FAFC',
-    padding: 16,
-    borderRadius: 12,
-  },
-  resultLabel: { 
-    color: isDarkMode ? '#E2E8F0' : '#4A5568', 
-    fontWeight: '600',
-    fontSize: 14,
-    marginBottom: 8
-  },
-  badge: { 
-    paddingHorizontal: 12, 
-    paddingVertical: 8, 
-    borderRadius: 8, 
-    alignSelf: 'flex-start', 
-    marginBottom: 12 
-  },
-  badgeText: { 
-    fontWeight: '700', 
-    fontSize: 13 
-  },
-  confidenceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8
-  },
-  confidenceLabel: { 
-    color: isDarkMode ? '#A0AEC0' : '#4A5568',
-    fontSize: 14,
-    marginRight: 6
-  },
-  confidenceValue: { 
-    color: '#4CC9F0', 
-    fontWeight: '800',
-    fontSize: 15
-  },
-  detailsText: { 
-    fontSize: 14, 
-    color: isDarkMode ? '#8892B0' : '#718096', 
-    lineHeight: 20,
-    marginTop: 4
-  },
-  emptyStateContainer: {
-    paddingVertical: 40,
-    alignItems: 'center'
-  },
-  emptyStateText: { 
-    color: '#8892B0', 
-    textAlign: 'center',
-    fontSize: 15,
-    fontWeight: '500'
-  }
-});
+const getStyles = (isDarkMode: boolean) => {
+  const theme = isDarkMode ? colors.dark : colors.light;
+  return StyleSheet.create({
+    container: { 
+      flex: 1, 
+      backgroundColor: theme.background, 
+      padding: 20 
+    },
+    title: { 
+      fontSize: 28, 
+      fontWeight: '800', 
+      color: theme.text, 
+      marginBottom: 24,
+      letterSpacing: -0.5
+    },
+    card: { 
+      backgroundColor: theme.card, 
+      padding: 20, 
+      borderRadius: 16, 
+      marginBottom: 20, 
+      shadowColor: isDarkMode ? '#000' : '#CBD5E1', 
+      shadowOffset: { width: 0, height: 4 }, 
+      shadowOpacity: 0.15, 
+      shadowRadius: 12, 
+      elevation: 4,
+      borderWidth: isDarkMode ? 1 : 0,
+      borderColor: theme.border
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    cardSubtitle: { 
+      fontSize: 12, 
+      color: theme.textSecondary, 
+      fontWeight: '700', 
+      letterSpacing: 1.2 
+    },
+    timestamp: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      fontWeight: '500',
+    },
+    loadingContainer: {
+      paddingVertical: 60,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    loadingText: {
+      marginTop: 12,
+      color: theme.textSecondary,
+      fontSize: 14,
+      fontWeight: '500'
+    },
+    imageWrapper: { 
+      width: '100%', 
+      height: 220, 
+      borderRadius: 12, 
+      backgroundColor: theme.background, 
+      overflow: 'hidden',
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    microscopeImage: { 
+      width: '100%', 
+      height: '100%', 
+      resizeMode: 'cover' 
+    },
+    imageFallback: { 
+      flex: 1, 
+      justifyContent: 'center', 
+      alignItems: 'center' 
+    },
+    fallbackText: { 
+      color: theme.textSecondary,
+      fontWeight: '500' 
+    },
+    resultContainer: {
+      backgroundColor: theme.background,
+      padding: 16,
+      borderRadius: 12,
+    },
+    resultLabel: { 
+      color: theme.text, 
+      fontWeight: '600',
+      fontSize: 14,
+      marginBottom: 8
+    },
+    badge: { 
+      paddingHorizontal: 12, 
+      paddingVertical: 8, 
+      borderRadius: 8, 
+      alignSelf: 'flex-start', 
+      marginBottom: 12 
+    },
+    badgeText: { 
+      fontWeight: '700', 
+      fontSize: 13 
+    },
+    confidenceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8
+    },
+    confidenceLabel: { 
+      color: theme.textSecondary,
+      fontSize: 14,
+      marginRight: 6
+    },
+    confidenceValue: { 
+      color: theme.primary, 
+      fontWeight: '800',
+      fontSize: 15
+    },
+    detailsText: { 
+      fontSize: 14, 
+      color: theme.textSecondary, 
+      lineHeight: 20,
+      marginTop: 4
+    },
+    emptyStateContainer: {
+      paddingVertical: 40,
+      alignItems: 'center'
+    },
+    emptyStateText: { 
+      color: theme.textSecondary, 
+      textAlign: 'center',
+      fontSize: 15,
+      fontWeight: '500'
+    }
+  });
+};
