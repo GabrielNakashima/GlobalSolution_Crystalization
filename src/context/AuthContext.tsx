@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 export interface User {
@@ -15,21 +16,44 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
-// Credenciais mockadas (hardcoded)
 const MOCK_CREDENTIALS = {
   email: 'admin@crystal.com',
   password: '123456'
 };
 
-// Dados do usuário que serão armazenados na sessão
 const MOCK_USER_DATA: User = {
   id: 'usr_001_alpha',
-  name: 'Lead Researcher',
+  name: 'Pesquisador Científico',
   email: 'admin@crystal.com',
   role: 'Administrator'
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Helper para lidar com a diferença entre Web (Navegador) e Mobile (Celular)
+const setStorageItem = async (key: string, value: string) => {
+  if (Platform.OS === 'web') {
+    localStorage.setItem(key, value);
+  } else {
+    await SecureStore.setItemAsync(key, value);
+  }
+};
+
+const getStorageItem = async (key: string) => {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem(key);
+  } else {
+    return await SecureStore.getItemAsync(key);
+  }
+};
+
+const deleteStorageItem = async (key: string) => {
+  if (Platform.OS === 'web') {
+    localStorage.removeItem(key);
+  } else {
+    await SecureStore.deleteItemAsync(key);
+  }
+};
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -38,8 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const loadSession = async () => {
       try {
-        // Recupera a sessão utilizando o SecureStore da Expo
-        const session = await SecureStore.getItemAsync('user_session');
+        const session = await getStorageItem('user_session');
         if (session) {
           setUser(JSON.parse(session));
         }
@@ -56,11 +79,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string): Promise<boolean> => {
     if (email === MOCK_CREDENTIALS.email && password === MOCK_CREDENTIALS.password) {
       try {
-        const userData: User = {
-          ...MOCK_USER_DATA
-        };
-
-        await SecureStore.setItemAsync('user_session', JSON.stringify(userData));
+        const userData: User = { ...MOCK_USER_DATA };
+        await setStorageItem('user_session', JSON.stringify(userData));
         setUser(userData);
         return true;
       } catch (error) {
@@ -73,8 +93,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
-      // Limpa a sessão do dispositivo e o estado da aplicação
-      await SecureStore.deleteItemAsync('user_session');
+      await deleteStorageItem('user_session');
       setUser(null);
     } catch (error) {
       console.error('Erro ao encerrar a sessão:', error);

@@ -1,15 +1,23 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://API_SOA:8080/api';
+
+// IMPORTANTE: Mude '192.168.X.X' para o IP real da sua máquina na rede
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://191.181.59.172:8080';
 
 export interface Mission {
-  id: string;
-  molecule: string;
-  concentration: string;
-  ph: string;
-  temperature: string;
-  status: 'Em Análise' | 'Aprovado' | 'Em Órbita' | 'Finalizado';
-  date: string;
+  sampleId?: number;
+  proteinName?: string;
+  captureDate?: string;
+  temperature?: number;
+  gravityLevel?: number;
+  mechanicalVibration?: number;
+  status?: string;
+  imageUrl?: string;
+  expeditionEfficiencyScore?: number;
+  recommendedAction?: string;
+  classification?: string;
+  confidence?: number;
+  predictionDate?: string;
 }
 
 interface AppContextType {
@@ -17,11 +25,23 @@ interface AppContextType {
   toggleTheme: () => void;
   missions: Mission[];
   fetchMissions: () => Promise<void>;
-  addMission: (mission: Omit<Mission, 'id' | 'status' | 'date'>) => Promise<boolean>;
+  addMission: (mission: Partial<Mission>) => Promise<boolean>;
   loadingMissions: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+const MOCK_MISSIONS: Mission[] = [
+  { 
+    sampleId: 101, 
+    proteinName: 'Insulina Variante B', 
+    temperature: 20.0, 
+    gravityLevel: 0.8,
+    mechanicalVibration: 1.2,
+    status: 'Em Órbita', 
+    captureDate: new Date().toISOString() 
+  }
+];
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
@@ -55,21 +75,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const fetchMissions = useCallback(async () => {
     setLoadingMissions(true);
     try {
-      const response = await fetch(`${API_URL}/missions`);
+      const response = await fetch(`${API_URL}/samples/all`);
+      
       if (response.ok) {
-        const data = await response.json();
+        const data: Mission[] = await response.json();
         setMissions(data);
+      } else {
+        throw new Error("Erro na API.");
       }
     } catch (error) {
-      console.error('Erro de conexão com o servidor SOA:', error);
+      console.error('Erro na conexão:', error);
+      setMissions(MOCK_MISSIONS);
     } finally {
       setLoadingMissions(false);
     }
   }, []);
 
-  const addMission = async (newMissionData: Omit<Mission, 'id' | 'status' | 'date'>): Promise<boolean> => {
+  const addMission = async (newMissionData: Partial<Mission>): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_URL}/missions`, {
+      const response = await fetch(`${API_URL}/samples`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newMissionData),
@@ -79,10 +103,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await fetchMissions();
         return true;
       }
-      return false;
+      throw new Error("Falha na gravação.");
     } catch (error) {
-      console.error('Erro ao enviar missão para a API:', error);
-      return false;
+      console.warn('API Offline - Simulando adição.');
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          setMissions((prev) => [
+            ...prev,
+            { 
+              ...newMissionData, 
+              sampleId: Math.floor(Math.random() * 1000), 
+              status: 'Em Análise', 
+              captureDate: new Date().toISOString() 
+            }
+          ]);
+          resolve(true);
+        }, 1000);
+      });
     }
   };
 

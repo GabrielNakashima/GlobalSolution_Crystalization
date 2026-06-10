@@ -1,187 +1,144 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator, TouchableOpacity, useWindowDimensions } from 'react-native';
-import { useApp, API_URL } from '../../src/context/AppContext';
-import { colors } from '../../src/constants/theme';
-import { LineChart } from 'react-native-chart-kit';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Image, Modal, ActivityIndicator } from 'react-native';
+import { useApp } from '../../src/context/AppContext';
 
-interface ChartDataPayload {
-  labels: string[];
-  temperatures: number[];
-  purityRates: number[];
-  purityLabels: string[];
+interface PredicaoMock {
+  id: number;
+  sample_id: string;
+  classification: string;
+  confidence: number;
+  prediction_date: string;
+}
+
+interface ImagemAmostra {
+  idImagem: string;
+  url: string;
+  descricao: string;
+  predicao?: PredicaoMock;
 }
 
 export default function AnalyticsDashboard() {
-  const { width } = useWindowDimensions();
-  const screenWidth = width - 48;
-  
   const { isDarkMode } = useApp();
-  const theme = isDarkMode ? colors.dark : colors.light;
-  const styles = useMemo(() => getStyles(isDarkMode), [isDarkMode]);
-  
-  const [chartData, setChartData] = useState<ChartDataPayload | null>(null);
-  const [loadingCharts, setLoadingCharts] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const [searchId, setSearchId] = useState('');
+  const [imagensFiltradas, setImagensFiltradas] = useState<ImagemAmostra[]>([]);
+  const [itemSelecionado, setItemSelecionado] = useState<ImagemAmostra | null>(null);
+  const [modalVisivel, setModalVisivel] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchTelemetryMetrics();
-  }, []);
-
-  const fetchTelemetryMetrics = async () => {
-    setLoadingCharts(true);
-    setHasError(false);
-    try {
-      const response = await fetch(`${API_URL}/analytics/telemetry`);
-      if (response.ok) {
-        const data = await response.json();
-        setChartData(data);
-      } else {
-        setHasError(true);
-      }
-    } catch (error) {
-      console.error('Erro ao ler métricas do banco:', error);
-      setHasError(true);
-    } finally {
-      setLoadingCharts(false);
-    }
+  const buscarPorId = () => {
+    if (!searchId) return;
+    
+    const mockImagens: ImagemAmostra[] = [
+      { idImagem: '1', url: 'https://via.placeholder.com/150/4CC9F0/FFFFFF?text=Cristal+A', descricao: `Câmera Frontal - ID ${searchId}` },
+      { idImagem: '2', url: 'https://via.placeholder.com/150/4CC9F0/FFFFFF?text=Cristal+B', descricao: `Câmera Superior - ID ${searchId}` },
+    ];
+    setImagensFiltradas(mockImagens);
   };
 
-  const chartConfig = useMemo(() => ({
-    backgroundColor: theme.card,
-    backgroundGradientFrom: theme.card,
-    backgroundGradientTo: theme.card,
-    decimalPlaces: 1,
-    color: (opacity = 1) => `rgba(76, 201, 240, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(${isDarkMode ? '160, 174, 192' : '74, 85, 104'}, ${opacity})`,
-    propsForDots: {
-      r: "4",
-      strokeWidth: "2",
-      stroke: theme.primary
+  const abrirDetalhesEPredizer = (item: ImagemAmostra) => {
+    setItemSelecionado(item);
+    setModalVisivel(true);
+    setLoading(true);
+
+    setTimeout(() => {
+      const respostaPreDefinida: PredicaoMock = {
+        id: Math.floor(Math.random() * 1000), 
+        sample_id: searchId,                  
+        classification: "Estável (Sucesso)",  
+        confidence: 0.94,                     
+        prediction_date: new Date().toLocaleDateString('pt-BR') 
+      };
+      
+      setItemSelecionado({ ...item, predicao: respostaPreDefinida });
+      setLoading(false);
+    }, 1500);
+  };
+
+  const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: isDarkMode ? '#0B0E14' : '#F4F6F9', padding: 20 },
+    title: { fontSize: 24, fontWeight: 'bold', color: isDarkMode ? '#FFFFFF' : '#0B0E14', marginBottom: 20 },
+    buscaContainer: { flexDirection: 'row', marginBottom: 20 },
+    input: {
+      flex: 1, backgroundColor: isDarkMode ? '#131A26' : '#FFFFFF', color: isDarkMode ? '#FFF' : '#000',
+      padding: 12, borderRadius: 8, borderWidth: 1, borderColor: isDarkMode ? '#232D3F' : '#CBD5E1'
     },
-    fillShadowGradientFrom: theme.primary,
-    fillShadowGradientTo: theme.card,
-    fillShadowGradientFromOpacity: 0.2,
-    fillShadowGradientToOpacity: 0,
-  }), [isDarkMode, theme]);
+    botaoBusca: { backgroundColor: '#4CC9F0', padding: 15, marginLeft: 10, borderRadius: 8, justifyContent: 'center' },
+    textoBotao: { color: '#0B0E14', fontWeight: 'bold', textAlign: 'center' },
+    cardImagem: { 
+      flexDirection: 'row', backgroundColor: isDarkMode ? '#131A26' : '#FFFFFF', 
+      padding: 10, marginBottom: 10, borderRadius: 8, alignItems: 'center',
+      borderWidth: 1, borderColor: isDarkMode ? '#232D3F' : '#CBD5E1'
+    },
+    imagemThumbnail: { width: 60, height: 60, borderRadius: 5, marginRight: 15 },
+    textoImagem: { fontSize: 16, color: isDarkMode ? '#FFF' : '#000' },
+    
+    // Modal
+    modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)' },
+    modalContent: { width: '85%', backgroundColor: isDarkMode ? '#131A26' : '#FFFFFF', padding: 25, borderRadius: 12, minHeight: 200, justifyContent: 'center' },
+    modalTitulo: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, textAlign: 'center', color: isDarkMode ? '#FFF' : '#000' },
+    modalTexto: { fontSize: 16, marginBottom: 10, color: isDarkMode ? '#8892B0' : '#4A5568' },
+    modalDestaque: { color: '#4CC9F0', fontWeight: 'bold' },
+    botaoFechar: { backgroundColor: '#E53E3E', padding: 15, borderRadius: 8, marginTop: 20 },
+    botaoFecharTexto: { color: '#FFF', fontWeight: 'bold', textAlign: 'center' },
+    loadingTexto: { marginTop: 15, fontSize: 16, color: isDarkMode ? '#FFF' : '#000', textAlign: 'center' }
+  });
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>Telemetria</Text>
-      
-      {loadingCharts ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={styles.loadingText}>Coletando dados...</Text>
-        </View>
-      ) : hasError ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={theme.error} />
-          <Text style={[styles.emptyText, { color: theme.error }]}>Falha na conexão com o reator.</Text>
-          <TouchableOpacity style={{ marginTop: 12, padding: 8 }} onPress={fetchTelemetryMetrics}>
-            <Text style={{ color: theme.primary, fontWeight: '700' }}>TENTAR NOVAMENTE</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Rastreamento de Payload</Text>
+
+      <View style={styles.buscaContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Digite o ID da Amostra (Ex: 102)"
+          placeholderTextColor={isDarkMode ? "#566275" : "#A0AEC0"}
+          value={searchId}
+          onChangeText={setSearchId}
+          keyboardType="numeric"
+        />
+        <TouchableOpacity style={styles.botaoBusca} onPress={buscarPorId}>
+          <Text style={styles.textoBotao}>Buscar</Text>
+        </TouchableOpacity>
+      </View>
+
+      <FlatList
+        data={imagensFiltradas}
+        keyExtractor={(item) => item.idImagem}
+        renderItem={({ item }) => (
+          <TouchableOpacity style={styles.cardImagem} onPress={() => abrirDetalhesEPredizer(item)}>
+            <Image source={{ uri: item.url }} style={styles.imagemThumbnail} />
+            <Text style={styles.textoImagem}>{item.descricao}</Text>
           </TouchableOpacity>
-        </View>
-      ) : chartData ? (
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Ionicons name="thermometer-outline" size={20} color={theme.primary} style={styles.icon} />
-            <Text style={styles.cardTitle}>Estabilidade Térmica da Câmara (°C / h)</Text>
+        )}
+        ListEmptyComponent={<Text style={{ color: isDarkMode ? '#8892B0' : '#A0AEC0', textAlign: 'center', marginTop: 40 }}>Nenhuma imagem carregada. Busque por um ID.</Text>}
+      />
+
+      <Modal visible={modalVisivel} transparent={true} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {loading ? (
+              <View style={{ alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#4CC9F0" />
+                <Text style={styles.loadingTexto}>Motor Python processando matriz...</Text>
+              </View>
+            ) : (
+              itemSelecionado?.predicao && (
+                <>
+                  <Text style={styles.modalTitulo}>Resultado Preditivo IA</Text>
+                  <Text style={styles.modalTexto}>ID Predição: <Text style={styles.modalDestaque}>{itemSelecionado.predicao.id}</Text></Text>
+                  <Text style={styles.modalTexto}>Classificação: <Text style={styles.modalDestaque}>{itemSelecionado.predicao.classification}</Text></Text>
+                  <Text style={styles.modalTexto}>Confiança Matemática: <Text style={styles.modalDestaque}>{itemSelecionado.predicao.confidence * 100}%</Text></Text>
+                  <Text style={styles.modalTexto}>Data da Análise: <Text style={styles.modalDestaque}>{itemSelecionado.predicao.prediction_date}</Text></Text>
+                  
+                  <TouchableOpacity style={styles.botaoFechar} onPress={() => setModalVisivel(false)}>
+                    <Text style={styles.botaoFecharTexto}>Fechar Validação</Text>
+                  </TouchableOpacity>
+                </>
+              )
+            )}
           </View>
-          
-          <LineChart
-            data={{
-              labels: chartData.labels,
-              datasets: [{ data: chartData.temperatures }]
-            }}
-            width={screenWidth}
-            height={220}
-            chartConfig={chartConfig}
-            bezier
-            style={styles.chartStyle}
-            withVerticalLines={false}
-            withOuterLines={false}
-          />
         </View>
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="cloud-offline-outline" size={48} color={theme.textSecondary} />
-          <Text style={styles.emptyText}>Sem telemetria orbital gravada.</Text>
-        </View>
-      )}
-    </ScrollView>
+      </Modal>
+    </View>
   );
 }
-
-const getStyles = (isDarkMode: boolean) => {
-  const theme = isDarkMode ? colors.dark : colors.light;
-  return StyleSheet.create({
-    container: { 
-      flex: 1, 
-      backgroundColor: theme.background, 
-      padding: 24 
-    },
-    centerContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginTop: 100
-    },
-    title: { 
-      fontSize: 28, 
-      fontWeight: '800', 
-      color: theme.text, 
-      marginBottom: 24,
-      letterSpacing: -0.5
-    },
-    card: { 
-      backgroundColor: theme.card, 
-      padding: 20, 
-      paddingBottom: 24,
-      borderRadius: 16, 
-      marginBottom: 24, 
-      shadowColor: isDarkMode ? '#000' : '#CBD5E1', 
-      shadowOffset: { width: 0, height: 4 }, 
-      shadowOpacity: 0.1, 
-      shadowRadius: 10, 
-      elevation: 3,
-      borderWidth: isDarkMode ? 1 : 0,
-      borderColor: theme.border
-    },
-    cardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 20
-    },
-    icon: {
-      marginRight: 8
-    },
-    cardTitle: { 
-      fontSize: 15, 
-      fontWeight: '700', 
-      color: theme.text,
-    },
-    chartStyle: { 
-      borderRadius: 12,
-      marginLeft: -10
-    },
-    loadingText: {
-      color: theme.textSecondary,
-      marginTop: 16,
-      fontSize: 15,
-      fontWeight: '500'
-    },
-    emptyContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 80
-    },
-    emptyText: { 
-      color: theme.textSecondary, 
-      textAlign: 'center', 
-      marginTop: 16,
-      fontSize: 16,
-      fontWeight: '500'
-    }
-  });
-};
