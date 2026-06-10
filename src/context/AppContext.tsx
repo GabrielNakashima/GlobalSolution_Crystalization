@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect, useContext, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // IMPORTANTE: Mude '192.168.X.X' para o IP real da sua máquina na rede
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://191.181.59.172:8080';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080';
 
 export interface Mission {
   sampleId?: number;
