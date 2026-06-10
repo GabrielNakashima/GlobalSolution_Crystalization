@@ -3,15 +3,16 @@ import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Image, RefreshCo
 import { useApp, API_URL } from '../../src/context/AppContext';
 import { colors } from '../../src/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Double } from 'react-native/Libraries/Types/CodegenTypes';
 
 type ClassificationType = 'Clear' | 'Crystals' | 'Precipitate' | 'Other';
 
 interface LatestImageAnalysis {
-  imageUrl: string;
-  classification: ClassificationType;
-  confidence: number;
-  timestamp: string;
-  details: string;
+  proteinName: string;
+  temperature: Double;
+  gravityLevel: Double;
+  status: string;
+  recommendedAction: string;
 }
 
 export default function DashboardTelemetry() {
@@ -27,7 +28,7 @@ export default function DashboardTelemetry() {
   const fetchLatestImageAnalysis = useCallback(async () => {
     setLoadingImage(true);
     try {
-      const response = await fetch(`${API_URL}/images/latest`);
+      const response = await fetch(`${API_URL}/samples/1235`);
       
       if (response.ok) {
         const data = await response.json();
@@ -67,8 +68,6 @@ export default function DashboardTelemetry() {
     }
   };
 
-  const badgeConfig = latestAnalysis ? getClassificationBadge(latestAnalysis.classification) : null;
-
   return (
     <ScrollView 
       style={styles.container} 
@@ -81,56 +80,13 @@ export default function DashboardTelemetry() {
 
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardSubtitle}>ÚLTIMA ANÁLISE DE IMAGEM</Text>
-          {latestAnalysis?.timestamp && (
-            <Text style={styles.timestamp}>{new Date(latestAnalysis.timestamp).toLocaleTimeString()}</Text>
-          )}
+          <Text style={styles.cardSubtitle}>ÚLTIMA ANÁLISE</Text>
+            <Text style={styles.timestamp}>STATUS: {(latestAnalysis?.status)}</Text>
+            <Text style={styles.timestamp}>PROTEIN: {(latestAnalysis?.proteinName)}</Text>
+            <Text style={styles.timestamp}>ACTION: {(latestAnalysis?.recommendedAction)}</Text>
+            <Text style={styles.timestamp}>GRAVITY: {(latestAnalysis?.gravityLevel)}</Text>
+            <Text style={styles.timestamp}>TEMPERATURE:{(latestAnalysis?.temperature)}</Text>
         </View>
-        
-        {loadingImage ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator color={theme.primary} size="large" />
-            <Text style={styles.loadingText}>Processando imagem...</Text>
-          </View>
-        ) : latestAnalysis ? (
-          <View>
-            <View style={styles.imageWrapper}>
-              {latestAnalysis.imageUrl && !imageError ? (
-                <Image 
-                  source={{ uri: latestAnalysis.imageUrl }} 
-                  style={styles.microscopeImage} 
-                  onError={() => setImageError(true)}
-                />
-              ) : (
-                <View style={styles.imageFallback}>
-                  <Ionicons name="image-outline" size={32} color={theme.textSecondary} />
-                  <Text style={styles.fallbackText}>Erro ao carregar imagem do microscópio</Text>
-                </View>
-              )}
-            </View>
-            
-            <View style={styles.resultContainer}>
-              <Text style={styles.resultLabel}>Resultado do Classificador:</Text>
-              
-              {badgeConfig && (
-                <View style={[styles.badge, { backgroundColor: badgeConfig.backgroundColor }]}>
-                  <Text style={[styles.badgeText, { color: badgeConfig.color }]}>{badgeConfig.label}</Text>
-                </View>
-              )}
-              
-              <View style={styles.confidenceRow}>
-                <Text style={styles.confidenceLabel}>Confiança do Modelo:</Text>
-                <Text style={styles.confidenceValue}>{latestAnalysis.confidence}%</Text>
-              </View>
-              
-              <Text style={styles.detailsText}>{latestAnalysis.details}</Text>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.emptyStateContainer}>
-            <Text style={styles.emptyStateText}>Nenhuma imagem processada no banco de dados.</Text>
-          </View>
-        )}
       </View>
     </ScrollView>
   );

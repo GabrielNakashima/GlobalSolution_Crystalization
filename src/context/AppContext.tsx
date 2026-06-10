@@ -25,7 +25,6 @@ interface AppContextType {
   toggleTheme: () => void;
   missions: Mission[];
   fetchMissions: () => Promise<void>;
-  addMission: (mission: Partial<Mission>) => Promise<boolean>;
   loadingMissions: boolean;
 }
 
@@ -75,7 +74,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const fetchMissions = useCallback(async () => {
     setLoadingMissions(true);
     try {
-      const response = await fetch(`${API_URL}/samples/all`);
+      const response = await fetch(`${API_URL}/samples/ids`);
+
+      console.log("Status:", response.status);
+      console.log("Status Text:", response.statusText);
       
       if (response.ok) {
         const data: Mission[] = await response.json();
@@ -91,40 +93,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  const addMission = async (newMissionData: Partial<Mission>): Promise<boolean> => {
-    try {
-      const response = await fetch(`${API_URL}/samples`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newMissionData),
-      });
-
-      if (response.ok) {
-        await fetchMissions();
-        return true;
-      }
-      throw new Error("Falha na gravação.");
-    } catch (error) {
-      console.warn('API Offline - Simulando adição.');
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          setMissions((prev) => [
-            ...prev,
-            { 
-              ...newMissionData, 
-              sampleId: Math.floor(Math.random() * 1000), 
-              status: 'Em Análise', 
-              captureDate: new Date().toISOString() 
-            }
-          ]);
-          resolve(true);
-        }, 1000);
-      });
-    }
-  };
-
   return (
-    <AppContext.Provider value={{ isDarkMode, toggleTheme, missions, fetchMissions, addMission, loadingMissions }}>
+    <AppContext.Provider value={{ isDarkMode, toggleTheme, missions, fetchMissions, loadingMissions }}>
       {children}
     </AppContext.Provider>
   );
